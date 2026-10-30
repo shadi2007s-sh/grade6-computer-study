@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  match /tala_events/{eventId} {
+   function isParent() {
+    return request.auth != null &&
+      request.auth.token.email == 'Shadi2007s@gmail.com' &&
+      request.auth.token.email_verified == true &&
+      request.auth.token.firebase.sign_in_provider == 'password';
+   }
+   allow read: if isParent();
+   allow create: if request.auth != null &&
+      request.auth.token.firebase.sign_in_provider == 'anonymous' &&
+      request.resource.data.keys().hasOnly(['type','student','createdAt','lesson','kind','score','total','percent','missed']) &&
+      request.resource.data.student == 'Tala' &&
+      request.resource.data.type in ['studied','quiz'] &&
+      request.resource.data.createdAt == request.time &&
+      (request.resource.data.type == 'studied' &&
+       request.resource.data.keys().hasAll(['lesson']) &&
+       request.resource.data.lesson in ['1.1','1.2','1.3','1.4','1.5','1.6']
+       ||
+       request.resource.data.type == 'quiz' &&
+       request.resource.data.keys().hasAll(['kind','lesson','score','total','percent','missed']) &&
+       request.resource.data.kind in ['lesson','exam'] &&
+       request.resource.data.score is int &&
+       request.resource.data.total is int &&
+       request.resource.data.score >= 0 &&
+       request.resource.data.total in [5,30] &&
+       request.resource.data.score <= request.resource.data.total &&
+       request.resource.data.percent is int &&
+       request.resource.data.percent >= 0 &&
+       request.resource.data.percent <= 100 &&
+       request.resource.data.missed is list &&
+       request.resource.data.missed.size() <= 30
+      );
+   allow update, delete: if false;
+  }
+ }
+}
