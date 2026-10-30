@@ -25,13 +25,13 @@ service cloud.firestore {
        request.resource.data.score is int &&
        request.resource.data.total is int &&
        request.resource.data.score >= 0 &&
-       request.resource.data.total in [5,30] &&
+       request.resource.data.total in [5,30,54] &&
        request.resource.data.score <= request.resource.data.total &&
        request.resource.data.percent is int &&
        request.resource.data.percent >= 0 &&
        request.resource.data.percent <= 100 &&
        request.resource.data.missed is list &&
-       request.resource.data.missed.size() <= 30
+       request.resource.data.missed.size() <= 54
       );
    allow update, delete: if false;
   }
