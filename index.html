@@ -51,6 +51,20 @@ async function parentPage(){
   const snapshot=await cloud.getDocs(cloud.query(cloud.collection(cloud.db,'tala_events'),cloud.orderBy('createdAt','desc'),cloud.limit(300)));
   const events=snapshot.docs.map(d=>d.data()),attempts=events.filter(e=>e.type==='quiz'),done=new Set(events.filter(e=>e.type==='studied').map(e=>e.lesson));
   const best=attempts.filter(e=>e.kind==='exam').map(e=>e.percent);
+  const average=attempts.length?Math.round(attempts.reduce((n,e)=>n+e.percent,0)/attempts.length):null;
+  const latest=attempts[0];
+  const byLesson=lessons.map(l=>{
+   const own=attempts.filter(e=>e.kind==='lesson'&&e.lesson===l.id);
+   const mistakes=attempts.flatMap(e=>Array.isArray(e.missed)?e.missed:[]).filter(m=>m.lesson===l.id).length;
+   const bestScore=own.length?Math.max(...own.map(e=>e.percent)):null;
+   return {id:l.id,title:l.title,studied:done.has(l.id),count:own.length,bestScore,mistakes};
+  });
+  const history=attempts.slice(0,12).reverse();
+  const chart=history.length?'<div style="display:flex;align-items:flex-end;gap:9px;height:155px;padding:12px 4px;border-bottom:1px solid #d5e0e7">'+history.map((e,i)=>'<div title="'+escapeHTML((e.kind==='exam'?'Final exam':'Lesson '+e.lesson)+' — '+e.percent+'%')+'" style="flex:1;min-width:14px;text-align:center"><div style="font-size:11px">'+e.percent+'%</div><div style="height:'+Math.max(3,e.percent)+'px;background:#147c85;border-radius:6px 6px 0 0"></div></div>').join('')+'</div><p class="small">Oldest → newest (last '+history.length+' attempts)</p>':'<p>No attempts yet.</p>';
+  const lessonRows=byLesson.map(l=>'<tr><td>'+escapeHTML(l.id+' '+l.title)+'</td><td>'+(l.studied?'Yes':'No')+'</td><td>'+(l.bestScore===null?'—':l.bestScore+'%')+'</td><td>'+l.mistakes+'</td></tr>').join('');
+  const priorities=[...byLesson].sort((a,b)=>b.mistakes-a.mistakes).filter(l=>l.mistakes>0).slice(0,3);
+  const recommendations=priorities.length?'<p>Review '+priorities.map(l=>'<b>Lesson '+escapeHTML(l.id)+'</b> ('+l.mistakes+' missed answer'+(l.mistakes===1?'':'s')+')').join(', ')+'.</p>':'<p>No recorded mistakes yet. Continue practising each lesson.</p>';
+  const analytics='<h3>Performance overview</h3><p><b>Average score across attempts:</b> '+(average===null?'Not available':average+'%')+'</p><p><b>Latest result:</b> '+(latest?latest.score+'/'+latest.total+' ('+latest.percent+'%)':'Not available')+'</p><h3>Score history</h3>'+chart+'<h3>Progress by lesson</h3><div style="overflow-x:auto"><table><tr><th>Lesson</th><th>Studied</th><th>Best lesson quiz</th><th>Missed answers</th></tr>'+lessonRows+'</table></div><p class="small">Missed answers are counted across saved attempts, including final exams. A lesson quiz score is shown only after that lesson quiz is taken.</p><h3>Recommended revision</h3>'+recommendations;
   app.innerHTML='<div class="card"><h2>📊 Tala — Online Parent Dashboard</h2><p><b>Lessons studied:</b> '+done.size+'/6</p><p><b>Quiz/exam attempts:</b> '+attempts.length+'</p><p><b>Best final exam:</b> '+(best.length?Math.max(...best)+'%':'Not taken')+'</p><button class="btn" onclick="parentSignOut()">Sign out</button><h3>Recent results</h3>'+(attempts.length?'<table><tr><th>Date</th><th>Assessment</th><th>Score</th></tr>'+attempts.slice(0,50).map(e=>'<tr><td>'+escapeHTML(e.createdAt?.toDate?.().toLocaleString()||'Pending')+'</td><td>'+escapeHTML(e.kind==='exam'?'Final exam':'Lesson '+e.lesson)+'</td><td>'+e.score+'/'+e.total+' ('+e.percent+'%)</td></tr>').join('')+'</table>':'<p>No online results yet.</p>')+'<h3>Most recent mistakes</h3>'+(attempts[0]?.missed?.length?'<ul>'+attempts[0].missed.map(m=>'<li>Lesson '+escapeHTML(m.lesson)+': '+escapeHTML(m.question)+'</li>').join('')+'</ul>':'<p>No recent mistakes recorded.</p>')+'</div>';
  }catch(e){app.innerHTML='<div class="card"><h2>Parent dashboard</h2><p>Unable to load results: '+escapeHTML(e.message)+'</p><button class="btn" onclick="parentSignOut()">Sign out</button></div>'}
 }
