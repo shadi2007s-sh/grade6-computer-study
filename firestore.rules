@@ -4,7 +4,8 @@ service cloud.firestore {
   match /tala_events/{eventId} {
    function isParent() {
     return request.auth != null &&
-      request.auth.token.email == 'Shadi2007s@gmail.com' &&
+      request.auth.token.email is string &&
+      request.auth.token.email.lower() == 'shadi2007s@gmail.com' &&
       request.auth.token.firebase.sign_in_provider == 'password';
    }
    allow read: if isParent();
